@@ -1,5 +1,5 @@
 // Guarda o jogo no aparelho para funcionar sem internet.
-const CACHE = "toca-e-aprende-v1";
+const CACHE = "toca-e-aprende-v2";
 const ARQUIVOS = ["./", "index.html", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png"];
 
