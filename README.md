@@ -39,6 +39,6 @@ Dica: deixe o volume alto e, no iPhone, a chave lateral fora do modo silencioso.
 - **Animais:** gravações do Wikimedia Commons e do Pixabay, reunidas no projeto [shiv19/animal-sounds](https://github.com/shiv19/animal-sounds) (licenças CC0, domínio público, CC BY e CC BY-SA). A lista com autor de cada som aparece em **Créditos dos sons**, na tela inicial do jogo.
 - **Gato e veículos:** conjunto [ESC-50](https://github.com/karolpiczak/ESC-50) de K. J. Piczak, clipes do Freesound, licença CC BY-NC 3.0 (uso não comercial).
 - **Coruja, campainha da bicicleta, buzina do ônibus, navio e foguete:** sons criados para o jogo.
-- **Voz das cores, números e letras:** gerada com o modelo Kokoro (voz pf_dora).
+- **Voz do menu, cores, números e letras:** gerada no [ElevenLabs](https://elevenlabs.io) (voz Carla).
 
 Por causa da licença CC BY-NC de parte dos sons, este projeto é para uso pessoal, não comercial.
