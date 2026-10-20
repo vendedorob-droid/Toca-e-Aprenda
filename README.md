@@ -1,8 +1,9 @@
 # Toca e Aprende
 
-Jogo de toque para crianças pequenas (feito para 1 ano e meio). Seis jogos com botões grandes:
+Jogo de toque para crianças pequenas (feito para 1 ano e meio). Sete jogos com botões grandes:
 
 - **Animais** — 32 bichinhos, cada toque toca o som de verdade do animal.
+- **Família** — mamãe, papai, vovó, vovô, titia, titio, irmãos, primos, dinda e dindo; a voz fala cada um.
 - **Frutas** — 17 frutas; a voz fala o nome de cada uma.
 - **Veículos** — 16 veículos com seus sons.
 - **Cores** — 12 cores; uma voz suave fala o nome de cada uma.
@@ -41,6 +42,7 @@ Dica: deixe o volume alto e, no iPhone, a chave lateral fora do modo silencioso.
 - **Gato e veículos:** conjunto [ESC-50](https://github.com/karolpiczak/ESC-50) de K. J. Piczak, clipes do Freesound, licença CC BY-NC 3.0 (uso não comercial).
 - **Coruja, campainha da bicicleta, buzina do ônibus, navio e foguete:** sons criados para o jogo.
 - **Voz do menu, cores, números e letras:** gerada no [ElevenLabs](https://elevenlabs.io) (voz Carla).
+- **Voz da família:** gerada com o modelo Kokoro.
 - **Voz das frutas:** gerada no [ElevenLabs](https://elevenlabs.io) (voz Tara).
 
 Por causa da licença CC BY-NC de parte dos sons, este projeto é para uso pessoal, não comercial.
