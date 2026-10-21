@@ -42,7 +42,6 @@ Dica: deixe o volume alto e, no iPhone, a chave lateral fora do modo silencioso.
 - **Gato e veículos:** conjunto [ESC-50](https://github.com/karolpiczak/ESC-50) de K. J. Piczak, clipes do Freesound, licença CC BY-NC 3.0 (uso não comercial).
 - **Coruja, campainha da bicicleta, buzina do ônibus, navio e foguete:** sons criados para o jogo.
 - **Voz do menu, cores, números e letras:** gerada no [ElevenLabs](https://elevenlabs.io) (voz Carla).
-- **Voz da família:** gerada com o modelo Kokoro.
-- **Voz das frutas:** gerada no [ElevenLabs](https://elevenlabs.io) (voz Tara).
+- **Voz da família e das frutas:** gerada no [ElevenLabs](https://elevenlabs.io) (voz Tara).
 
 Por causa da licença CC BY-NC de parte dos sons, este projeto é para uso pessoal, não comercial.
