@@ -1,8 +1,9 @@
 # Toca e Aprende
 
-Jogo de toque para crianças pequenas (feito para 1 ano e meio). Oito jogos com botões grandes:
+Jogo de toque para crianças pequenas (feito para 1 ano e meio). Nove jogos com botões grandes:
 
 - **Animais** — 32 bichinhos, cada toque toca o som de verdade do animal.
+- **Estradinha** — arrasta o veículo pela estrada até o destino: carrinho (casa), micro-ônibus (escola), caminhão (mercado), caçamba (obra), Uno da firma (firma) e blindado do BOP (base), com motor, buzina, sirene e festa na chegada.
 - **Desenhar** — área livre para riscar com o dedo: traço arco-íris ou colorido, estrelinhas e um somzinho que muda conforme a altura do dedo.
 - **Família** — mamãe, papai, vovó, vovô, titia, titio, irmãos, primos, dinda e dindo; a voz fala cada um.
 - **Frutas** — 17 frutas; a voz fala o nome de cada uma.
