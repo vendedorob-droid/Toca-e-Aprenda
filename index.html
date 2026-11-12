@@ -48,6 +48,15 @@ main.estrada{display:flex;flex-direction:column;gap:10px;position:relative}
 .pisca1{animation:pisca .5s steps(1) infinite}.pisca2{animation:pisca .5s steps(1) infinite .25s}
 @keyframes pisca{50%{opacity:.15}}
 .dest{transform-box:fill-box;transform-origin:center}
+.sep{flex:0 0 2px;align-self:stretch;margin:6px 4px;background:var(--soft);border-radius:2px}
+.tbtn{flex:0 0 auto;width:60px;height:60px;border:0;border-radius:50%;background:#fff;box-shadow:0 5px 0 var(--soft);cursor:pointer;font-size:30px;line-height:1;padding:0}
+.tbtn.on{outline:4px solid var(--grape);outline-offset:2px}
+.pulsa{transform-box:fill-box;transform-origin:center;animation:pulsa .7s ease-in-out infinite alternate}
+@keyframes pulsa{from{transform:scale(.85)}to{transform:scale(1.2)}}
+.obi{transform-box:fill-box;transform-origin:center bottom}
+.balanca{animation:balanca .45s ease}
+@keyframes balanca{20%{transform:rotate(-14deg)}50%{transform:rotate(11deg)}80%{transform:rotate(-5deg)}}
+
 .dest-pula{animation:pula .6s ease 3}
 main.desenho{display:flex;flex-direction:column;gap:10px}
 .paleta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -98,7 +107,7 @@ main.desenho{display:flex;flex-direction:column;gap:10px}
     <h1 id="titulo">Toca e Aprende</h1>
   </header>
   <main id="tela"></main>
-  <div class="dica" id="dica"><p>Escolha um jogo e deixe ele tocar nas figuras. Na Estradinha, ele arrasta o carrinho até o destino. Em Desenhar, ele risca com o dedo e cada toque solta uma estrelinha. Nos animais e veículos sai o som de cada um; na família, frutas, cores, números e letras, uma voz fala o nome. Deixe o volume alto e o celular fora do modo silencioso.</p>
+  <div class="dica" id="dica"><p>Escolha um jogo e deixe ele tocar nas figuras. Na Estradinha, ele arrasta o carrinho até o destino, desviando dos obstáculos. Em Desenhar, ele risca com o dedo e cada toque solta uma estrelinha. Nos animais e veículos sai o som de cada um; na família, frutas, cores, números e letras, uma voz fala o nome. Deixe o volume alto e o celular fora do modo silencioso.</p>
     <details><summary>Créditos dos sons</summary><ul id="creditos"></ul><p>Veículos: conjunto ESC-50 (K. J. Piczak), CC BY-NC 3.0. Sons dos animais reunidos no projeto shiv19/animal-sounds (Wikimedia Commons e Pixabay). Voz: ElevenLabs (elevenlabs.io), vozes Carla e Tara.</p></details></div>
 </div>
 <div id="fala" aria-live="polite"></div>
@@ -195,113 +204,212 @@ function menu(){
   }
 }
 
-/* Estradinha: arrastar o veículo pela estrada até o destino */
+/* Estradinha: arrastar o veículo pela estrada, desviando dos obstáculos, até o destino */
 let estradaStop=null;
-const RODA=(x,r=9)=>`<g class="roda" data-x="${x}"><circle cx="${x}" cy="46" r="${r}" fill="#2B2B33"/><circle cx="${x}" cy="46" r="${r*.45}" fill="#D9DDE3"/><rect x="${x-1.3}" y="${46-r*.88}" width="2.6" height="${r*.75}" rx="1" fill="#D9DDE3"/></g>`;
+const RODA=(x,r=9.5)=>`<circle cx="${x}" cy="44" r="${r+2.2}" fill="#141414"/><g class="roda" data-x="${x}"><circle cx="${x}" cy="44" r="${r}" fill="#1C1C1C"/><circle cx="${x}" cy="44" r="${r*.9}" fill="none" stroke="#3A3A3A" stroke-width=".8"/><circle cx="${x}" cy="44" r="${r*.58}" fill="url(#grim)"/>${[0,72,144,216,288].map(a=>{const t=a*Math.PI/180;return `<line x1="${x}" y1="44" x2="${(x+Math.cos(t)*r*.52).toFixed(2)}" y2="${(44+Math.sin(t)*r*.52).toFixed(2)}" stroke="#7D848C" stroke-width="1.5"/>`}).join("")}<circle cx="${x}" cy="44" r="${r*.17}" fill="#5A5F66"/></g>`;
+const VID=d=>`fill="url(#gglass)" stroke="#2A2A2A" stroke-width="1"`;
 const VEIC=[
- {n:"Carrinho",dest:"🏠",dn:"Casa",buz:"bibi",motor:90,rodas:[26,76],svg:
-  `<path d="M8 38Q8 26 20 24L32 12Q36 8 44 8L64 8Q70 8 74 13L84 24Q96 26 96 36L96 42Q96 46 92 46L12 46Q8 46 8 42Z" fill="#E8304A"/>
-   <path d="M36 13L46 13L46 24L28 24Z" fill="#BDE6FF"/><path d="M50 13L64 13Q67 13 70 17L76 24L50 24Z" fill="#BDE6FF"/>
-   <circle cx="92" cy="32" r="3.5" fill="#FFE066"/><rect x="8" y="30" width="5" height="5" rx="1.5" fill="#FF8A8A"/>`},
- {n:"Micro-ônibus",dest:"🏫",dn:"Escola",buz:"onibus",motor:75,rodas:[22,80],svg:
-  `<path d="M4 44L4 10Q4 4 10 4L80 4Q86 4 89 9L96 22L96 44Z" fill="#F7C600"/>
-   <rect x="4" y="30" width="92" height="5" fill="#fff" opacity=".85"/>
-   <rect x="9" y="10" width="13" height="13" rx="2" fill="#BDE6FF"/><rect x="25" y="10" width="13" height="13" rx="2" fill="#BDE6FF"/>
-   <rect x="41" y="10" width="13" height="13" rx="2" fill="#BDE6FF"/><rect x="58" y="10" width="11" height="28" rx="2" fill="#9ED3F5"/>
-   <path d="M73 10L84 10L92 23L73 23Z" fill="#BDE6FF"/><circle cx="93" cy="38" r="3" fill="#FFE066"/>`},
- {n:"Caminhão",dest:"🏪",dn:"Mercado",buz:"caminhao",motor:60,rodas:[18,40,84],svg:
-  `<rect x="2" y="2" width="64" height="40" rx="4" fill="#2F7FE0"/><rect x="8" y="10" width="52" height="5" rx="2" fill="#fff" opacity=".5"/>
-   <path d="M68 14L84 14Q88 14 91 18L98 28L98 44L68 44Z" fill="#E8304A"/><path d="M74 18L84 18L91 28L74 28Z" fill="#BDE6FF"/>
-   <rect x="2" y="40" width="96" height="4" fill="#3B3F48"/><circle cx="96" cy="37" r="2.5" fill="#FFE066"/>`},
- {n:"Caçamba",dest:"🏗️",dn:"Obra",buz:"caminhao",motor:55,rodas:[18,40,84],svg:
-  `<path d="M2 12L64 12L60 42L8 42Z" fill="#FF8A1F"/><path d="M8 18L58 18" stroke="#C96400" stroke-width="3"/><path d="M10 28L56 28" stroke="#C96400" stroke-width="3"/>
-   <path d="M6 12Q16 0 30 6Q44 -2 58 12Z" fill="#9A6B3F"/>
-   <path d="M68 14L84 14Q88 14 91 18L98 28L98 44L68 44Z" fill="#F7C600"/><path d="M74 18L84 18L91 28L74 28Z" fill="#BDE6FF"/>
-   <rect x="2" y="40" width="96" height="4" fill="#3B3F48"/><circle cx="96" cy="37" r="2.5" fill="#FFE066"/>`},
- {n:"Uno da firma",dest:"🏢",dn:"Firma",buz:"bibi2",motor:95,rodas:[24,78],svg:
-  `<path d="M6 44L6 12Q6 8 10 8L60 8Q64 8 67 12L76 24L92 27Q96 28 96 33L96 42Q96 46 92 46L10 46Q6 46 6 44Z" fill="#F4F6F8" stroke="#9AA3AE" stroke-width="1.5"/>
-   <path d="M10 12L24 12L24 24L10 24Z" fill="#BDE6FF"/><path d="M28 12L46 12L46 24L28 24Z" fill="#BDE6FF"/><path d="M50 12L60 12Q62 12 64 15L71 24L50 24Z" fill="#BDE6FF"/>
-   <rect x="6" y="29" width="90" height="4" fill="#2F7FE0"/><text class="vt" data-cx="51" x="51" y="42" text-anchor="middle" font-size="8" font-weight="900" fill="#2F7FE0" font-family="Arial,sans-serif">FIRMA</text>
-   <circle cx="93" cy="34" r="3" fill="#FFE066"/>`},
- {n:"Blindado do BOP",dest:"🏛️",dn:"Base",buz:"sirene",motor:50,r:10,rodas:[20,46,80],svg:
-  `<rect x="30" y="-3" width="9" height="6" rx="1.5" fill="#FF2D3A" class="pisca1"/><rect x="40" y="-3" width="9" height="6" rx="1.5" fill="#2F7FFF" class="pisca2"/>
-   <path d="M4 44L4 10Q4 3 11 3L70 3Q76 3 80 9L90 22L97 26L97 44Z" fill="#2B2F36"/>
-   <path d="M64 9L74 9L83 22L64 22Z" fill="#6B7A8A"/><rect x="12" y="12" width="9" height="5" rx="1" fill="#6B7A8A"/><rect x="28" y="12" width="9" height="5" rx="1" fill="#6B7A8A"/><rect x="44" y="12" width="9" height="5" rx="1" fill="#6B7A8A"/>
-   <text class="vt" data-cx="40" x="40" y="37" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="Arial,sans-serif" letter-spacing="1">BOP</text>
-   <rect x="86" y="38" width="12" height="6" rx="1" fill="#555B66"/><circle cx="94" cy="31" r="2.5" fill="#FFE066"/>`},
+ {n:"Carrinho",dest:"🏠",dn:"Casa",buz:"bibi",motor:72,rodas:[25,77],svg:
+ `<path d="M4 41Q3 31 10 29L25 26L36 14Q40 10 46 10L66 10Q72 10 76 15L85 25L93 27.5Q98 29 98.5 35L98.5 41Q98.5 45.5 94 45.5L7 45.5Q4 45.5 4 41Z" fill="url(#gb_red)" stroke="#8E1B1B" stroke-width=".6"/>
+  <path d="M38.5 15Q41 13 45 13L54.5 13L54.5 25L31 25Z" ${VID()}/><path d="M58 13L66 13Q70 13 73 16.5L80 25L58 25Z" ${VID()}/>
+  <path d="M12 31L92 31" stroke="#fff" stroke-opacity=".35" stroke-width="1.4"/>
+  <path d="M56.3 26L56.3 44M31 27Q29.5 35 31 44M80 27L80.5 40" stroke="#000" stroke-opacity=".3" stroke-width=".7" fill="none"/>
+  <rect x="45" y="29.5" width="5.5" height="1.6" rx=".8" fill="#000" opacity=".45"/><rect x="69" y="29.5" width="5.5" height="1.6" rx=".8" fill="#000" opacity=".45"/>
+  <path d="M78 23.5L82.5 21.5L83.5 25L79 25.5Z" fill="#7A1414"/>
+  <path d="M91.5 29.5L97.5 31.5L97.5 34.5L91 33.5Z" fill="#FFF8D2" stroke="#999" stroke-width=".4"/><rect x="4.2" y="30.5" width="4.5" height="5" rx="1" fill="#B71C1C"/>
+  <rect x="2.5" y="39.5" width="13" height="4.5" rx="2" fill="#2B2B2B"/><rect x="87" y="39.5" width="12.5" height="4.5" rx="2" fill="#2B2B2B"/>`},
+ {n:"Micro-ônibus",dest:"🏫",dn:"Escola",buz:"onibus",motor:62,rodas:[21,79],svg:
+ `<path d="M3.5 45.5L3.5 9Q3.5 4.5 8.5 4.5L77 4.5Q83 4.5 86.5 9.5L94.5 23.5Q98.5 25.5 98.5 31L98.5 41.5Q98.5 45.5 94.5 45.5Z" fill="url(#gb_yel)" stroke="#9A7400" stroke-width=".6"/>
+  <rect x="8" y="9.5" width="13" height="13" rx="2" ${VID()}/><rect x="24" y="9.5" width="13" height="13" rx="2" ${VID()}/><rect x="40" y="9.5" width="13" height="13" rx="2" ${VID()}/><rect x="57" y="9.5" width="13" height="13" rx="2" ${VID()}/>
+  <path d="M79.5 9L84.5 9Q86.5 9 87.5 11L92.5 22.5L79.5 22.5Z" ${VID()}/>
+  <rect x="3.5" y="28" width="95" height="7" fill="#1F1F1F"/><text class="vt" data-cx="45" x="45" y="33.6" text-anchor="middle" font-size="6" font-weight="900" fill="#F9C80E" font-family="Arial,sans-serif" letter-spacing=".6">ESCOLAR</text>
+  <path d="M55.5 24L55.5 44M71.5 24L71.5 44" stroke="#000" stroke-opacity=".3" stroke-width=".7"/>
+  <path d="M93 26L97.8 28L97.8 31.5L93 31Z" fill="#FFF8D2" stroke="#999" stroke-width=".4"/><rect x="3.6" y="23" width="3.5" height="4.5" rx="1" fill="#B71C1C"/>
+  <rect x="2" y="40" width="11" height="5" rx="1.8" fill="#2B2B2B"/><rect x="87" y="40" width="12" height="5" rx="1.8" fill="#2B2B2B"/>`},
+ {n:"Caminhão",dest:"🏪",dn:"Mercado",buz:"caminhao",motor:46,rodas:[15,31,84],r:9,svg:
+ `<rect x="2" y="2" width="66" height="38" rx="2" fill="url(#gb_wht)" stroke="#9AA3AE" stroke-width=".6"/>
+  ${[8,14,20,26,32,38,44,50,56,62].map(x=>`<line x1="${x}" y1="3" x2="${x}" y2="39" stroke="#000" stroke-opacity=".07" stroke-width="1"/>`).join("")}
+  <rect x="2" y="17" width="66" height="7" fill="#1E88E5"/><rect x="2" y="39" width="96" height="4.5" fill="#2E2E2E"/>
+  <path d="M70 13Q70 8 75 8L88 8Q93 8 95 12.5L98.5 23L98.5 42Q98.5 45 95.5 45L70 45Z" fill="url(#gb_red)" stroke="#8E1B1B" stroke-width=".6"/>
+  <path d="M85 11L89.5 11Q91.5 11 92.5 13.5L96 23L85 23Z" ${VID()}/><path d="M73 11.5L82 11.5L82 23L73 23Z" ${VID()}/>
+  <path d="M83.5 25L83.5 43" stroke="#000" stroke-opacity=".3" stroke-width=".7"/><path d="M94.5 13.5L98 12.5L98 19L96 19Z" fill="#222"/>
+  <rect x="95.5" y="32" width="3" height="4" rx=".8" fill="#FFF8D2"/>`},
+ {n:"Caçamba",dest:"🏗️",dn:"Obra",buz:"caminhao",motor:42,rodas:[15,33,84],r:9,svg:
+ `<path d="M3 9Q12 -2 24 4Q34 -4 46 3Q57 -2 66 9Z" fill="url(#gb_dirt)"/><circle cx="20" cy="5" r="1.6" fill="#6B4F33"/><circle cx="44" cy="4" r="1.3" fill="#6B4F33"/>
+  <path d="M2 9L67 9L67 39L7 39Z" fill="url(#gb_org)" stroke="#9A4F00" stroke-width=".6"/><rect x="1" y="8" width="67" height="3" fill="#C46A00"/>
+  ${[15,26,37,48,59].map(x=>`<line x1="${x}" y1="12" x2="${x}" y2="38" stroke="#000" stroke-opacity=".15" stroke-width="2"/>`).join("")}
+  <rect x="2" y="39" width="96" height="4.5" fill="#2E2E2E"/>
+  <path d="M70 13Q70 8 75 8L88 8Q93 8 95 12.5L98.5 23L98.5 42Q98.5 45 95.5 45L70 45Z" fill="url(#gb_yel)" stroke="#9A7400" stroke-width=".6"/>
+  <path d="M85 11L89.5 11Q91.5 11 92.5 13.5L96 23L85 23Z" ${VID()}/><path d="M73 11.5L82 11.5L82 23L73 23Z" ${VID()}/>
+  <path d="M83.5 25L83.5 43" stroke="#000" stroke-opacity=".3" stroke-width=".7"/><path d="M94.5 13.5L98 12.5L98 19L96 19Z" fill="#222"/>
+  <rect x="95.5" y="32" width="3" height="4" rx=".8" fill="#FFF8D2"/>`},
+ {n:"Uno da firma",dest:"🏢",dn:"Firma",buz:"bibi2",motor:80,rodas:[23,79],r:9,svg:
+ `<path d="M5 44L5 13Q5 8.5 9.5 8.5L60 8.5Q64.5 8.5 67.5 12.5L76 24L91.5 26.5Q97.5 27.5 97.5 33L97.5 42Q97.5 45.5 94 45.5L8 45.5Q5 45.5 5 44Z" fill="url(#gb_wht)" stroke="#8C949C" stroke-width=".6"/>
+  <path d="M9.5 12.5L23.5 12.5L23.5 24L9.5 24Z" ${VID()}/><path d="M27 12.5L45.5 12.5L45.5 24L27 24Z" ${VID()}/><path d="M49 12.5L60 12.5Q62.5 12.5 64.5 15.5L71 24L49 24Z" ${VID()}/>
+  <rect x="5" y="28.5" width="92.5" height="3.5" fill="#1E88E5"/><text class="vt" data-cx="47" x="47" y="40.5" text-anchor="middle" font-size="7" font-weight="900" fill="#1E5FB4" font-family="Arial,sans-serif" letter-spacing=".5">FIRMA</text>
+  <path d="M25.5 25L25.5 44M47.3 25L47.3 33M72 25L72 44" stroke="#000" stroke-opacity=".3" stroke-width=".7"/>
+  <path d="M71 22L75 20L76 23.5L72 24Z" fill="#333"/><rect x="91" y="29" width="6" height="4" rx="1" fill="#FFF8D2" stroke="#999" stroke-width=".4"/><rect x="5.2" y="27" width="3" height="6" rx=".8" fill="#C62828"/>
+  <rect x="3" y="39.5" width="12" height="5" rx="1.5" fill="#2B2B2B"/><rect x="85" y="39.5" width="13.5" height="5" rx="1.5" fill="#2B2B2B"/>`},
+ {n:"Blindado do BOP",dest:"🏛️",dn:"Base",buz:"sirene",motor:38,rodas:[21,79],r:10.5,svg:
+ `<rect x="24" y="-5" width="32" height="5" rx="2" fill="#222"/><rect x="25.5" y="-4.2" width="14" height="3.4" rx="1.2" fill="#FF2D3A" class="pisca1"/><rect x="40.5" y="-4.2" width="14" height="3.4" rx="1.2" fill="#2F7FFF" class="pisca2"/>
+  <path d="M3 45.5L3 7.5Q3 2.5 8 2.5L71 2.5Q77 2.5 81 8L90 20.5L96.5 23.5Q99 25 99 29L99 42Q99 45.5 95.5 45.5Z" fill="url(#gb_blk)" stroke="#0E1114" stroke-width=".8"/>
+  <path d="M3 26L90 26M30 3L30 25.5M60 3L60 25.5" stroke="#000" stroke-opacity=".4" stroke-width=".8"/>
+  ${[8,16,24,36,44,52,66,74].map(x=>`<circle cx="${x}" cy="6" r=".8" fill="#5A6068"/>`).join("")}
+  <path d="M64 8L73 8L81.5 20L64 20Z" fill="url(#gglass)" opacity=".85"/><path d="M67.5 8L67.5 20M71 8L71 20M74.5 9L74.5 20M78 13L78 20" stroke="#111" stroke-width="1"/>
+  <rect x="9" y="11" width="11" height="4" rx="1" fill="#5C6B78"/><rect x="36" y="11" width="11" height="4" rx="1" fill="#5C6B78"/><rect x="49" y="11" width="8" height="4" rx="1" fill="#5C6B78"/>
+  <text class="vt" data-cx="50" x="50" y="40" text-anchor="middle" font-size="12.5" font-weight="900" fill="#fff" font-family="Arial,sans-serif" letter-spacing="1">BOP</text>
+  <path d="M96 30L100.5 30L100.5 44L96 44" fill="none" stroke="#111" stroke-width="2.2"/><path d="M96 34.5H100.5M96 39H100.5" stroke="#111" stroke-width="1.6"/>
+  <rect x="95" y="25.5" width="3" height="3" rx=".6" fill="#FFF8D2"/>`},
 ];
-const vSvg=v=>v.svg+v.rodas.map(x=>RODA(x,v.r||9)).join("");
+const vSvg=v=>v.svg+v.rodas.map(x=>RODA(x,v.r||9.5)).join("");
+function sombra(hex,a){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const t=a<0?0:255,p=Math.abs(a);r=Math.round(r+(t-r)*p);g=Math.round(g+(t-g)*p);b=Math.round(b+(t-b)*p);return `rgb(${r},${g},${b})`}
+function defsVeic(){
+  const C={red:"#E53935",yel:"#FBC02D",wht:"#EEF1F4",org:"#FB8C00",blk:"#2B3036",dirt:"#8D6E4A"};
+  return `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+   ${Object.entries(C).map(([k,c])=>`<linearGradient id="gb_${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sombra(c,.38)}"/><stop offset=".35" stop-color="${c}"/><stop offset=".72" stop-color="${c}"/><stop offset="1" stop-color="${sombra(c,-.32)}"/></linearGradient>`).join("")}
+   <linearGradient id="gglass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D8F2FF"/><stop offset=".42" stop-color="#93CDEF"/><stop offset=".5" stop-color="#E6F6FF"/><stop offset=".58" stop-color="#79B9E3"/><stop offset="1" stop-color="#5D9CC9"/></linearGradient>
+   <radialGradient id="grim" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#F4F6F8"/><stop offset=".6" stop-color="#B9C0C7"/><stop offset="1" stop-color="#7E868E"/></radialGradient>
+  </defs></svg>`;
+}
+const TEMAS=[
+ {n:"Cidade",ic:"🏙️",bg:"#9CC98A",dot:"#86B574",ac:"#C9CDD2",curb:1,poly:1,deco:["🏢","🏠","🌳","🏪","🏬","🌳","🏡","🌲","⛲"],obs:["cone","poca","cone"],
+  pts:[[.1,.09],[.86,.09],[.86,.37],[.14,.37],[.14,.64],[.86,.64],[.86,.9],[.5,.9]]},
+ {n:"Fazenda",ic:"🚜",bg:"#A8D672",dot:"#93C15F",ac:"#CDAE7C",deco:["🐄","🌽","🐖","🐓","🌾","🏡","🐑","🌳","🌻","🚜"],obs:["🐔","🪨","🐄"],
+  pts:[[.12,.08],[.5,.14],[.86,.1],[.88,.3],[.5,.33],[.15,.38],[.13,.58],[.45,.63],[.85,.58],[.87,.8],[.6,.9],[.36,.88]]},
+ {n:"Praia",ic:"🏖️",bg:"#F2DCA8",dot:"#E3C98F",ac:"#E8D2A0",deco:["🌴","⛱️","🐚","🌴","🦀","🏄","🌴","⛵","🐬"],obs:["🦀","⚽","poca"],
+  pts:[[.14,.07],[.4,.18],[.75,.16],[.85,.34],[.58,.48],[.24,.5],[.15,.7],[.45,.82],[.8,.86]]},
+ {n:"Floresta",ic:"🌲",bg:"#78B35F",dot:"#669F4F",ac:"#9C845F",deco:["🌲","🌳","🍄","🦌","🌲","🐿️","🌳","🦉","🌲","🐇"],obs:["🪵","🐢","🪨"],
+  pts:[[.12,.08],[.6,.07],[.86,.22],[.7,.4],[.35,.36],[.16,.52],[.38,.68],[.8,.63],[.86,.83],[.52,.92],[.24,.87]]},
+];
+function rnd(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function caminho(P,poly){
+  if(poly){const R=58;let d=`M${P[0][0]} ${P[0][1]}`;
+    for(let i=1;i<P.length-1;i++){const a=P[i-1],b=P[i],c=P[i+1];
+      const l1=Math.hypot(b[0]-a[0],b[1]-a[1]),l2=Math.hypot(c[0]-b[0],c[1]-b[1]),r=Math.min(R,l1/2,l2/2);
+      d+=` L${b[0]+(a[0]-b[0])*r/l1} ${b[1]+(a[1]-b[1])*r/l1} Q${b[0]} ${b[1]} ${b[0]+(c[0]-b[0])*r/l2} ${b[1]+(c[1]-b[1])*r/l2}`}
+    const z=P[P.length-1];return d+` L${z[0]} ${z[1]}`}
+  let d=`M${P[0][0]} ${P[0][1]}`;
+  for(let i=0;i<P.length-1;i++){const p0=P[Math.max(0,i-1)],p1=P[i],p2=P[i+1],p3=P[Math.min(P.length-1,i+2)];
+    d+=` C${p1[0]+(p2[0]-p0[0])/6} ${p1[1]+(p2[1]-p0[1])/6} ${p2[0]-(p3[0]-p1[0])/6} ${p2[1]-(p3[1]-p1[1])/6} ${p2[0]} ${p2[1]}`}
+  return d;
+}
 function abrirEstrada(j){
   titulo.textContent=j.nome;voltar.hidden=false;dica.hidden=true;
   tela.className="estrada";tela.scrollTop=0;
-  tela.innerHTML=`<div class="garagem">${VEIC.map((v,i)=>`<button class="vbtn${i?"":" on"}" data-i="${i}" aria-label="${v.n}"><svg viewBox="0 -8 100 66">${vSvg(v)}</svg></button>`).join("")}</div><div class="pista" id="pista"></div><div class="chegou" id="chegou" hidden></div>`;
-  const pista=document.getElementById("pista"),chegouEl=document.getElementById("chegou");
-  const NS="http://www.w3.org/2000/svg";
-  let vi=0,svg,veh,vehIn,pts=[],idx=0,ang=0,W,H,ultimoLand=null,travado=false,dica1=null,motor=null,raf=0,conf=[],timers2=[],destEl;
+  tela.innerHTML=defsVeic()+`<div class="garagem">${VEIC.map((v,i)=>`<button class="vbtn${i?"":" on"}" data-i="${i}" aria-label="${v.n}"><svg viewBox="0 -8 101 64">${vSvg(v)}</svg></button>`).join("")}<span class="sep"></span>${TEMAS.map((t,i)=>`<button class="tbtn${i?"":" on"}" data-t="${i}" aria-label="Pista ${t.n}">${t.ic}</button>`).join("")}</div><div class="pista" id="pista"></div><div class="chegou" id="chegou" hidden></div>`;
+  const pista=document.getElementById("pista"),chegouEl=document.getElementById("chegou"),NS="http://www.w3.org/2000/svg";
+  const RW=70,LANE=16,HALF=11,OBR=5;
+  let vi=0,ti=0,svg,veh,vehIn,pts=[],idx=0,ang=0,W,H,ultimoLand=null,travado=false,dica1=null,dicaLado=null,motor=null,raf=0,conf=[],timers2=[],destEl,obs=[];
+  let lane=1,lv=16,laneRaf=0,bateu=0;
   function montar(frac){
     const r=pista.getBoundingClientRect();if(!r.width||!r.height)return;
-    const land=r.width>r.height*1.15;ultimoLand=land;
-    W=land?800:400;H=land?420:640;const rows=land?2:3,m=44,R=42,top=78,bot=H-82;
-    const ys=[...Array(rows)].map((_,i)=>top+(bot-top)*i/(rows-1));
-    const fim=(rows-1)%2===0?W-m-72:m+72;
-    let d=`M${m+20} ${ys[0]}`;
-    for(let i=0;i<rows;i++){
-      const y=ys[i],dir=i%2===0;
-      if(i===rows-1){d+=` L${fim} ${y}`;break}
-      const xe=dir?W-m:m,y2=ys[i+1],s=dir?1:0;
-      d+=` L${dir?xe-R:xe+R} ${y} A${R} ${R} 0 0 ${s} ${xe} ${y+R} L${xe} ${y2-R} A${R} ${R} 0 0 ${s} ${dir?xe-R:xe+R} ${y2}`;
-    }
-    const enfeites=[];const em=["🌳","🌷","🌳","🌼","🌲","🌻","🌳","🐄"];let k=0;
-    for(let i=0;i<rows-1;i++){const y=(ys[i]+ys[i+1])/2;for(const fx of land?[.25,.5,.75]:[.3,.62]){enfeites.push(`<text x="${W*fx}" y="${y+14}" font-size="38" text-anchor="middle">${em[k++%em.length]}</text>`)}}
-    enfeites.push(`<text x="${W*.55}" y="${ys[0]-36}" font-size="30" text-anchor="middle">☁️</text>`);
-    const dx=(rows-1)%2===0?fim+46:fim-46,dy=ys[rows-1];
+    const land=r.width>r.height*1.15;ultimoLand=land;W=land?800:400;H=land?420:640;
+    const T=TEMAS[ti],mx=land?18:22,my=land?20:16,P=T.pts.map(([x,y])=>land?[mx+y*(W-2*mx),my+x*(H-2*my)]:[mx+x*(W-2*mx),my+y*(H-2*my)]),d=caminho(P,T.poly);
+    const tmp=document.createElementNS(NS,"path");tmp.setAttribute("d",d);
+    const ms=document.createElementNS(NS,"svg");ms.style.cssText="position:absolute;width:0;height:0";ms.appendChild(tmp);document.body.appendChild(ms);
+    const L=tmp.getTotalLength(),N=Math.ceil(L/3);pts=[];let flip=false;
+    for(let i=0;i<=N;i++){const p=tmp.getPointAtLength(L*i/N);pts.push([p.x,p.y])}
+    ms.remove();
+    for(let i=0;i<pts.length;i++){const a=pts[Math.max(0,i-3)],b=pts[Math.min(pts.length-1,i+3)];let tx=b[0]-a[0],ty=b[1]-a[1];const l=Math.hypot(tx,ty)||1;tx/=l;ty/=l;
+      if(tx<-.35)flip=true;else if(tx>.35)flip=false;pts[i].push(tx,ty,flip)}
+    const zf=pts[pts.length-1],zx=zf[0]+zf[2]*56,zy=zf[1]+zf[3]*56;
+    // decoração longe da estrada
+    const R=rnd(ti*977+(land?7:3)),deco=[];
+    for(let y=26;y<H-10;y+=44)for(let x=22;x<W-10;x+=46){
+      const px=x+(R()-.5)*26,py=y+(R()-.5)*22;let md=1e9;for(let k=0;k<pts.length;k+=4){const q=pts[k];md=Math.min(md,(q[0]-px)**2+(q[1]-py)**2)}
+      if(md>(RW/2+26)**2&&(px-zx)**2+(py-zy)**2>70*70&&R()<.55){const e=T.deco[Math.floor(R()*T.deco.length)],s=24+R()*16;deco.push({px,py,e,s})}}
+    deco.sort((a,b)=>a.py-b.py);
+    // obstáculos
+    obs=[.3,.55,.78].map((f,k)=>{const i=Math.round(f*(pts.length-1)),q=pts[i],ln=k%2?-1:1;return{i,ln,x:q[0]-q[3]*ln*LANE,y:q[1]+q[2]*ln*LANE,t:T.obs[k]}});
+    const xadrez=(i)=>{const q=pts[i],a=Math.atan2(q[3],q[2])*180/Math.PI;let s="";for(let r=0;r<8;r++)for(let c=0;c<2;c++)s+=`<rect x="${c*5-5}" y="${r*RW/8-RW/2}" width="5" height="${RW/8}" fill="${(r+c)%2?"#222":"#fff"}"/>`;return `<g transform="translate(${q[0]},${q[1]}) rotate(${a})">${s}</g>`};
+    const fim=pts[pts.length-1],dx=Math.max(38,Math.min(W-38,fim[0]+fim[2]*56)),dy=Math.max(30,Math.min(H-56,fim[1]+fim[3]*56));
+    const pad=(o)=>{if(o.t==="cone")return `<g class="ob" data-k="${obs.indexOf(o)}" transform="translate(${o.x},${o.y}) scale(.85)"><g class="obi"><ellipse cx="1" cy="10" rx="13" ry="4" fill="#000" opacity=".22"/><path d="M-11 8.5L11 8.5L12 11.5L-12 11.5Z" fill="#D84315"/><path d="M-6.5 9L-2 -15L2 -15L6.5 9Z" fill="#FF7A1A"/><path d="M-4.9 2L4.9 2L3.8 -3.5L-3.8 -3.5Z" fill="#fff"/><path d="M-3.1 -7L3.1 -7L2.4 -10.5L-2.4 -10.5Z" fill="#fff"/></g></g>`;
+      if(o.t==="poca")return `<g class="ob" data-k="${obs.indexOf(o)}" transform="translate(${o.x},${o.y})"><g class="obi"><ellipse rx="15" ry="8.5" fill="#4E97C9" opacity=".9"/><ellipse rx="11.5" ry="6" fill="#6DB3E0"/><ellipse cx="-5" cy="-2.5" rx="6" ry="2" fill="#fff" opacity=".6"/></g></g>`;
+      return `<g class="ob" data-k="${obs.indexOf(o)}" transform="translate(${o.x},${o.y})"><g class="obi"><ellipse cx="0" cy="11" rx="13" ry="4" fill="#000" opacity=".22"/><text y="10" font-size="26" text-anchor="middle">${o.t}</text></g></g>`};
     pista.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" xmlns="${NS}">
-      <rect x="-400" y="-400" width="${W+800}" height="${H+800}" fill="#9BD770"/>
-      ${enfeites.join("")}
-      <path d="${d}" fill="none" stroke="#E9E4D4" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
-      <path id="via" d="${d}" fill="none" stroke="#6B6F78" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${d}" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="16 14" stroke-linecap="round"/>
-      <text x="${m+8}" y="${ys[0]-38}" font-size="30">🚦</text>
-      <g id="dest" class="dest"><text x="${dx}" y="${dy+22}" font-size="66" text-anchor="middle">${VEIC[vi].dest}</text>
-        <text x="${dx}" y="${dy+58}" font-size="20" font-weight="800" text-anchor="middle" fill="#3B2A55" font-family="Baloo 2,Trebuchet MS,sans-serif">${VEIC[vi].dn}</text></g>
-      <g id="veh"><g id="vehin" transform="translate(-50,-30)">${vSvg(VEIC[vi])}</g></g>
-      <text id="dica1" font-size="34" text-anchor="middle">👉</text>
+      <defs><pattern id="asf" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#50545C"/>${Array.from({length:14},()=>`<circle cx="${(R()*18).toFixed(1)}" cy="${(R()*18).toFixed(1)}" r="${(.4+R()*.7).toFixed(2)}" fill="${R()<.5?"#62666F":"#43474E"}"/>`).join("")}</pattern>
+        <pattern id="chao" width="22" height="22" patternUnits="userSpaceOnUse"><rect width="22" height="22" fill="${T.bg}"/>${Array.from({length:6},()=>`<path d="M${(R()*22).toFixed(1)} ${(R()*22).toFixed(1)}l1.2 -3.5l1.2 3.5" stroke="${T.dot}" stroke-width="1" fill="none"/>`).join("")}</pattern></defs>
+      <rect x="-400" y="-400" width="${W+800}" height="${H+800}" fill="url(#chao)"/>
+      <path d="${d}" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="${RW+22}" stroke-linecap="round" stroke-linejoin="round" transform="translate(2,4)"/>
+      <path d="${d}" fill="none" stroke="${T.ac}" stroke-width="${RW+18}" stroke-linecap="round" stroke-linejoin="round"/>
+      ${T.curb?`<path d="${d}" fill="none" stroke="#fff" stroke-width="${RW+8}" stroke-linecap="butt" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#D32F2F" stroke-width="${RW+8}" stroke-dasharray="10 10" stroke-linejoin="round"/>`:""}
+      <path d="${d}" fill="none" stroke="#EDEDED" stroke-width="${RW}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="url(#asf)" stroke-width="${RW-6}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="#F6C343" stroke-width="2.6" stroke-dasharray="15 12"/>
+      ${xadrez(4)}${xadrez(pts.length-4)}
+      <g id="dest" class="dest"><ellipse cx="${dx}" cy="${dy+22}" rx="34" ry="8" fill="#000" opacity=".18"/><text x="${dx}" y="${dy+20}" font-size="62" text-anchor="middle">${VEIC[vi].dest}</text>
+        <text x="${dx}" y="${dy+46}" font-size="18" font-weight="800" text-anchor="middle" fill="#3B2A55" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="Baloo 2,Trebuchet MS,sans-serif">${VEIC[vi].dn}</text></g>
+      ${deco.map(o=>`<ellipse cx="${o.px.toFixed(1)}" cy="${(o.py+o.s*.28).toFixed(1)}" rx="${(o.s*.42).toFixed(1)}" ry="${(o.s*.12).toFixed(1)}" fill="#000" opacity=".16"/><text x="${o.px.toFixed(1)}" y="${(o.py+o.s*.3).toFixed(1)}" font-size="${o.s.toFixed(0)}" text-anchor="middle">${o.e}</text>`).join("")}
+      ${obs.map(pad).join("")}
+      <g id="veh"><g id="vehin" transform="scale(.64) translate(-50,-40)"><ellipse cx="50" cy="55" rx="46" ry="3.5" fill="#000" opacity=".28"/>${vSvg(VEIC[vi])}</g></g>
+      <text id="dica1" font-size="32" text-anchor="middle">👉</text>
+      <text id="dicalado" font-size="34" text-anchor="middle" class="pulsa" visibility="hidden">👆</text>
       <g id="fxl"></g></svg>`;
-    svg=pista.querySelector("svg");veh=svg.getElementById?svg.querySelector("#veh"):null;veh=svg.querySelector("#veh");vehIn=svg.querySelector("#vehin");destEl=svg.querySelector("#dest");dica1=svg.querySelector("#dica1");
-    const via=svg.querySelector("#via"),L=via.getTotalLength(),N=Math.ceil(L/3);
-    pts=[];for(let i=0;i<=N;i++){const p=via.getPointAtLength(L*i/N);pts.push([p.x,p.y])}
-    const esp=(bot-top)/(rows-1);
-    pts.forEach(p=>{const row=Math.max(0,Math.min(rows-1,Math.round((p[1]-top)/esp)));p.push(row%2===1)});
+    svg=pista.querySelector("svg");veh=svg.querySelector("#veh");vehIn=svg.querySelector("#vehin");destEl=svg.querySelector("#dest");dica1=svg.querySelector("#dica1");dicaLado=svg.querySelector("#dicalado");
     idx=Math.round((frac||0)*(pts.length-1));pos();
-    svg.addEventListener("pointerdown",down);svg.addEventListener("pointermove",move);
-    svg.addEventListener("pointerup",up);svg.addEventListener("pointercancel",up);
+    svg.addEventListener("pointerdown",down);svg.addEventListener("pointermove",move);svg.addEventListener("pointerup",up);svg.addEventListener("pointercancel",up);
   }
   function pos(){
-    const i=Math.max(0,Math.min(pts.length-1,idx)),p=pts[i],a=pts[Math.max(0,i-3)],b=pts[Math.min(pts.length-1,i+3)];
-    const th=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI,flip=p[2];
-    veh.setAttribute("transform",`translate(${p[0]},${p[1]}) rotate(${flip?th-180:th}) scale(${flip?-1:1},1)`);
+    const i=Math.max(0,Math.min(pts.length-1,idx)),p=pts[i],th=Math.atan2(p[3],p[2])*180/Math.PI,flip=p[4];
+    const x=p[0]-p[3]*lv,y=p[1]+p[2]*lv;
+    veh.setAttribute("transform",`translate(${x},${y}) rotate(${flip?th-180:th}) scale(${flip?-1:1},1)`);
     vehIn.querySelectorAll(".vt").forEach(t=>flip?t.setAttribute("transform",`translate(${2*t.dataset.cx} 0) scale(-1 1)`):t.removeAttribute("transform"));
-    vehIn.querySelectorAll(".roda").forEach(g=>g.setAttribute("transform",`rotate(${ang} ${g.dataset.x} 46)`));
-    if(dica1){if(i>8){dica1.remove();dica1=null}else{const q=pts[Math.min(pts.length-1,i+28)];dica1.setAttribute("x",q[0]);dica1.setAttribute("y",q[1]+12)}}
+    vehIn.querySelectorAll(".roda").forEach(g=>g.setAttribute("transform",`rotate(${ang} ${g.dataset.x} 44)`));
+    if(dica1){if(i>10){dica1.remove();dica1=null}else{const q=pts[Math.min(pts.length-1,i+26)];dica1.setAttribute("x",q[0]-q[3]*lv);dica1.setAttribute("y",q[1]+q[2]*lv+12)}}
+    const perto=obs.find(o=>o.ln===lane&&i>=o.i-HALF-OBR-14&&i<o.i);
+    if(perto&&bateu){const q=pts[Math.min(pts.length-1,i+8)],l2=-lane*LANE;dicaLado.setAttribute("x",q[0]-q[3]*l2);dicaLado.setAttribute("y",q[1]+q[2]*l2+12);dicaLado.setAttribute("visibility","visible")}
+    else{dicaLado.setAttribute("visibility","hidden");if(!perto)bateu=0}
   }
+  function animaFaixa(){const alvo=lane*LANE;lv+=(alvo-lv)*.35;if(Math.abs(alvo-lv)<.3)lv=alvo;pos();laneRaf=lv===alvo?0:requestAnimationFrame(animaFaixa)}
   function pt(e){const m=svg.getScreenCTM();if(!m)return null;const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse());return[p.x,p.y]}
-  let ativo=null;
+  let ativo=null,ultimoMov=0;
   function down(e){if(travado)return;e.preventDefault();try{svg.setPointerCapture(e.pointerId)}catch(_){}ativo=e.pointerId;ac();motorIni();move(e)}
+  function bloqueio(o){
+    o.el=o.el||svg.querySelector(`.ob[data-k="${obs.indexOf(o)}"] .obi`);
+    if(o.el){o.el.classList.remove("balanca");void o.el.getBBox();o.el.classList.add("balanca")}
+    const agora=performance.now();if(agora-(o.ult||0)>700){o.ult=agora;try{const c=ac(),t=c.currentTime;ruido(c,t,.18,.35,300,120);tom(c,{tipo:"triangle",f1:320,f2:170,ini:t,dur:.22,vol:.18})}catch(e){}}
+    bateu=1;
+  }
   function move(e){
     if(ativo!==e.pointerId||travado)return;const f=pt(e);if(!f)return;
     let best=idx,bd=1e9;const lo=Math.max(0,idx-45),hi=Math.min(pts.length-1,idx+45);
     for(let i=lo;i<=hi;i++){const dd=(pts[i][0]-f[0])**2+(pts[i][1]-f[1])**2;if(dd<bd){bd=dd;best=i}}
-    if(bd>140*140||best===idx)return;
-    const passo=best-idx;ang+=passo*3/9*57.3;idx=best;pos();motorVel(Math.abs(passo));
-    if(idx>=pts.length-2)chegou();
+    if(bd>150*150)return;
+    // faixa: lado do dedo em relação ao meio da estrada
+    const q=pts[best],off=(f[0]-q[0])*(-q[3])+(f[1]-q[1])*q[2];
+    let quer=off>6?1:off<-6?-1:lane;
+    if(quer!==lane){const bloqueia=obs.find(o=>o.ln===quer&&Math.abs(best-o.i)<HALF+OBR);if(!bloqueia){lane=quer;if(!laneRaf)laneRaf=requestAnimationFrame(animaFaixa);vrumTroca()}}
+    // obstáculo na frente, na mesma faixa
+    for(const o of obs){const lim=o.i-HALF-OBR;if(o.ln===lane&&idx<=lim&&best>lim){best=lim;bloqueio(o)}}
+    if(best===idx){pos();return}
+    const passo=best-idx;ang+=passo*3/9.5*57.3;idx=best;pos();motorVel(Math.abs(passo));
+    if(idx>=pts.length-3)chegou();
   }
   function up(e){if(ativo!==e.pointerId)return;ativo=null;motorFim()}
-  function motorIni(){if(motor)return;try{const c=ac(),o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain();
-    o.type="sawtooth";o.frequency.value=VEIC[vi].motor;lp.type="lowpass";lp.frequency.value=500;g.gain.value=0;
-    o.connect(lp).connect(g).connect(c.destination);o.start();motor={o,g}}catch(e){}}
-  function motorVel(v){if(!motor)return;const t=ctx.currentTime,base=VEIC[vi].motor;
-    motor.o.frequency.setTargetAtTime(base+Math.min(v,20)*6,t,.05);motor.g.gain.setTargetAtTime(Math.min(.09,.03+v*.006),t,.03);motor.g.gain.setTargetAtTime(0,t+.12,.1)}
-  function motorFim(){if(!motor)return;const m=motor;motor=null;try{m.g.gain.setTargetAtTime(0,ctx.currentTime,.05);m.o.stop(ctx.currentTime+.5)}catch(e){}}
+  // motor: ronco grave com "rrrr", acelera com o arrasto
+  function motorIni(){
+    if(motor)return;try{
+      const c=ac(),t=c.currentTime,base=VEIC[vi].motor;
+      const o1=c.createOscillator(),o2=c.createOscillator(),lp=c.createBiquadFilter(),am=c.createGain(),g=c.createGain(),lfo=c.createOscillator(),lg=c.createGain();
+      o1.type="sawtooth";o2.type="square";o1.frequency.value=base;o2.frequency.value=base/2;
+      lp.type="lowpass";lp.frequency.value=650;lp.Q.value=4;
+      lfo.type="square";lfo.frequency.value=base/3;lg.gain.value=.45;am.gain.value=.55;lfo.connect(lg).connect(am.gain);
+      const n=c.createBuffer(1,c.sampleRate,c.sampleRate),nd=n.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+      const ns=c.createBufferSource(),nf=c.createBiquadFilter(),ng=c.createGain();ns.buffer=n;ns.loop=true;nf.type="bandpass";nf.frequency.value=180;nf.Q.value=1;ng.gain.value=.5;
+      o1.connect(lp);o2.connect(lp);ns.connect(nf).connect(ng).connect(lp);lp.connect(am).connect(g).connect(c.destination);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.2,t+.08);g.gain.setTargetAtTime(.09,t+.45,.15);
+      [o1,o2].forEach((o,k)=>{const b=k?base/2:base;o.frequency.setValueAtTime(b,t);o.frequency.linearRampToValueAtTime(b*2,t+.22);o.frequency.setTargetAtTime(b*1.15,t+.25,.12)});
+      lfo.frequency.setValueAtTime(base/3,t);lfo.frequency.linearRampToValueAtTime(base*.66,t+.22);lfo.frequency.setTargetAtTime(base*.38,t+.25,.12);
+      [o1,o2,lfo,ns].forEach(x=>x.start(t));motor={o1,o2,lfo,ns,g,lp,base};
+    }catch(e){}
+  }
+  function motorVel(v){if(!motor)return;const t=ctx.currentTime,b=motor.base,k=1.15+Math.min(v,22)*.05;
+    motor.o1.frequency.setTargetAtTime(b*k,t,.05);motor.o2.frequency.setTargetAtTime(b*k/2,t,.05);motor.lfo.frequency.setTargetAtTime(b*k/3,t,.05);
+    motor.lp.frequency.setTargetAtTime(650+Math.min(v,22)*40,t,.05);
+    motor.g.gain.setTargetAtTime(Math.min(.24,.14+v*.006),t,.03);motor.g.gain.setTargetAtTime(.08,t+.18,.12);
+    motor.o1.frequency.setTargetAtTime(b*1.15,t+.25,.2);motor.o2.frequency.setTargetAtTime(b*.575,t+.25,.2);motor.lfo.frequency.setTargetAtTime(b*.38,t+.25,.2)}
+  function vrumTroca(){if(!motor)return;const t=ctx.currentTime,b=motor.base;motor.o1.frequency.setTargetAtTime(b*1.9,t,.04);motor.g.gain.setTargetAtTime(.22,t,.03);motor.o1.frequency.setTargetAtTime(b*1.15,t+.2,.15)}
+  function motorFim(){if(!motor)return;const m=motor;motor=null;try{const t=ctx.currentTime;m.g.gain.cancelScheduledValues(t);m.g.gain.setTargetAtTime(0,t,.08);[m.o1,m.o2,m.lfo,m.ns].forEach(x=>x.stop(t+.6))}catch(e){}}
   function buzina(tipo){try{const c=ac(),t=c.currentTime+.02;
     if(tipo==="bibi"||tipo==="bibi2"){const f=tipo==="bibi"?466:554;[0,.22].forEach(d=>{tom(c,{tipo:"square",f1:f,ini:t+d,dur:.16,vol:.12});tom(c,{tipo:"square",f1:f*1.26,ini:t+d,dur:.16,vol:.08})})}
     else if(tipo==="onibus"){[0,.45].forEach(d=>{tom(c,{tipo:"square",f1:392,ini:t+d,dur:.35,vol:.1});tom(c,{tipo:"square",f1:494,ini:t+d,dur:.35,vol:.08})})}
@@ -322,19 +430,21 @@ function abrirEstrada(j){
     travado=true;motorFim();buzina(VEIC[vi].buz);festa();
     destEl.classList.remove("dest-pula");void destEl.getBBox();destEl.classList.add("dest-pula");
     chegouEl.innerHTML=`<span class="pula">Chegou! 🎉</span>`;chegouEl.hidden=false;
-    timers2.push(setTimeout(()=>{chegouEl.hidden=true;escolher((vi+1)%VEIC.length)},3200));
+    timers2.push(setTimeout(()=>{chegouEl.hidden=true;escolher((vi+1)%VEIC.length,(ti+1)%TEMAS.length)},3200));
   }
-  function escolher(i){
-    timers2.forEach(clearTimeout);timers2=[];motorFim();cancelAnimationFrame(raf);raf=0;
-    vi=i;travado=false;ang=0;chegouEl.hidden=true;
-    tela.querySelectorAll(".vbtn").forEach(b=>b.classList.toggle("on",+b.dataset.i===i));
-    const b=tela.querySelector(`.vbtn[data-i="${i}"]`);if(b)b.scrollIntoView({block:"nearest",inline:"nearest"});
-    montar(0);balao(VEIC[i].n);
+  function escolher(i,t){
+    timers2.forEach(clearTimeout);timers2=[];motorFim();cancelAnimationFrame(raf);raf=0;cancelAnimationFrame(laneRaf);laneRaf=0;
+    vi=i;if(t!=null)ti=t;travado=false;ang=0;lane=1;lv=LANE;bateu=0;chegouEl.hidden=true;
+    tela.querySelectorAll(".vbtn").forEach(b=>b.classList.toggle("on",+b.dataset.i===vi));
+    tela.querySelectorAll(".tbtn").forEach(b=>b.classList.toggle("on",+b.dataset.t===ti));
+    const b=tela.querySelector(`.vbtn[data-i="${vi}"]`);if(b)b.scrollIntoView({block:"nearest",inline:"nearest"});
+    montar(0);
   }
-  tela.querySelectorAll(".vbtn").forEach(b=>b.onclick=()=>{ac();escolher(+b.dataset.i);try{const a=ac();tom(a,{f1:700,f2:1100,ini:a.currentTime+.01,dur:.12,vol:.12})}catch(e){}});
+  tela.querySelectorAll(".vbtn").forEach(b=>b.onclick=()=>{ac();escolher(+b.dataset.i);balao(VEIC[vi].n);try{const a=ac();tom(a,{f1:700,f2:1100,ini:a.currentTime+.01,dur:.12,vol:.12})}catch(e){}});
+  tela.querySelectorAll(".tbtn").forEach(b=>b.onclick=()=>{ac();escolher(vi,+b.dataset.t);balao(TEMAS[ti].n);try{const a=ac();tom(a,{f1:600,f2:1300,ini:a.currentTime+.01,dur:.14,vol:.12})}catch(e){}});
   montar(0);
   let ro=null;try{ro=new ResizeObserver(()=>{const r=pista.getBoundingClientRect();const land=r.width>r.height*1.15;if(land!==ultimoLand&&!travado)montar(idx/(pts.length-1||1))});ro.observe(pista)}catch(e){}
-  estradaStop=()=>{try{ro&&ro.disconnect()}catch(e){}timers2.forEach(clearTimeout);timers2=[];motorFim();cancelAnimationFrame(raf);raf=0};
+  estradaStop=()=>{try{ro&&ro.disconnect()}catch(e){}timers2.forEach(clearTimeout);timers2=[];motorFim();cancelAnimationFrame(raf);raf=0;cancelAnimationFrame(laneRaf);laneRaf=0};
 }
 
 /* área de desenho livre */
