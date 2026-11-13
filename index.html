@@ -67,6 +67,8 @@ main.encaixe{display:flex;flex-direction:column;gap:10px;position:relative}
 .tab{position:absolute;border-radius:22px;background:repeating-linear-gradient(100deg,rgba(255,255,255,.06) 0 7px,rgba(0,0,0,.05) 7px 15px),linear-gradient(#DDAA70,#B98249);box-shadow:inset 0 -7px 0 rgba(0,0,0,.18),inset 0 5px 0 rgba(255,255,255,.25)}
 .bandeja{position:absolute;border-radius:22px;background:#F3E3BF;box-shadow:inset 0 4px 10px rgba(0,0,0,.08)}
 .buraco{position:absolute;display:flex;align-items:center;justify-content:center}
+.buraco.perto{animation:brilhaB .6s ease-in-out infinite alternate}
+@keyframes brilhaB{from{filter:drop-shadow(0 0 0 rgba(255,236,120,0))}to{filter:drop-shadow(0 0 10px rgba(255,236,120,.95)) drop-shadow(0 0 4px #fff)}}
 .buraco .emo{filter:brightness(0) opacity(.42)}
 .peca{position:absolute;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;filter:drop-shadow(0 6px 4px rgba(0,0,0,.28));transition:transform .15s;z-index:2}
 .peca.arrastando{transform:scale(1.12);filter:drop-shadow(0 14px 10px rgba(0,0,0,.3));z-index:6;transition:none;cursor:grabbing}
@@ -542,22 +544,31 @@ function abrirEncaixe(j){
   function brilhos(x,y,n=14){const em=["⭐","✨","🌟"];for(let i=0;i<n;i++){const sp=document.createElement("span");sp.className="faisca";sp.textContent=em[i%3];
     const a=Math.random()*6.283,d=50+Math.random()*70;sp.style.left=x+"px";sp.style.top=y+"px";sp.style.setProperty("--dx",Math.cos(a)*d+"px");sp.style.setProperty("--dy",Math.sin(a)*d+"px");
     enc.appendChild(sp);timers3.push(setTimeout(()=>sp.remove(),900))}}
+  function encaixar(o){
+    if(o.cheio)return;const s=G.s;o.cheio=true;o.b.classList.remove("perto");o.p.classList.add("encaixada");
+    o.p.style.left=o.hp.x+"px";o.p.style.top=o.hp.y+"px";o.b.classList.add("cheio");
+    somCerto(o);brilhos(o.hp.x+s/2,o.hp.y+s/2);
+    if(itens.every(q=>q.cheio))timers3.push(setTimeout(fimFase,700));
+  }
   function ligar(o){
     let ativo=null,dx=0,dy=0;
     o.p.addEventListener("pointerdown",e=>{if(o.cheio||ativo!==null)return;e.preventDefault();try{o.p.setPointerCapture(e.pointerId)}catch(_){}
       ac();ativo=e.pointerId;const r=enc.getBoundingClientRect();dx=e.clientX-r.left-parseFloat(o.p.style.left);dy=e.clientY-r.top-parseFloat(o.p.style.top);
       o.p.classList.remove("voltando");o.p.classList.add("arrastando");somPega()});
     o.p.addEventListener("pointermove",e=>{if(e.pointerId!==ativo)return;const r=enc.getBoundingClientRect();
-      o.p.style.left=Math.max(-G.s*.3,Math.min(r.width-G.s*.7,e.clientX-r.left-dx))+"px";o.p.style.top=Math.max(-G.s*.3,Math.min(r.height-G.s*.7,e.clientY-r.top-dy))+"px"});
+      o.p.style.left=Math.max(-G.s*.3,Math.min(r.width-G.s*.7,e.clientX-r.left-dx))+"px";o.p.style.top=Math.max(-G.s*.3,Math.min(r.height-G.s*.7,e.clientY-r.top-dy))+"px";
+      const dd=Math.hypot(o.hp.x-parseFloat(o.p.style.left),o.hp.y-parseFloat(o.p.style.top));
+      o.b.classList.toggle("perto",dd<G.s*1.6);
+      if(dd<G.s*.95){ativo=null;try{o.p.releasePointerCapture(e.pointerId)}catch(_){}o.p.classList.remove("arrastando");encaixar(o)}});
     const solta=e=>{if(e.pointerId!==ativo)return;ativo=null;o.p.classList.remove("arrastando");
       const x=parseFloat(o.p.style.left),y=parseFloat(o.p.style.top),s=G.s;
       const dist=(q)=>Math.hypot(q.x-x,q.y-y);
-      if(dist(o.hp)<s*.62){o.cheio=true;o.p.classList.add("encaixada");o.p.style.left=o.hp.x+"px";o.p.style.top=o.hp.y+"px";o.b.classList.add("cheio");
-        somCerto(o);brilhos(o.hp.x+s/2,o.hp.y+s/2);
-        if(itens.every(q=>q.cheio))timers3.push(setTimeout(fimFase,700));return}
-      const errado=itens.find(q=>q!==o&&!q.cheio&&dist(q.hp)<s*.62);
-      if(errado){errado.b.classList.remove("balanca");void errado.b.offsetWidth;errado.b.classList.add("balanca")}
-      somErro();o.p.classList.add("voltando");o.p.style.left=o.home.x+"px";o.p.style.top=o.home.y+"px"};
+      o.b.classList.remove("perto");
+      const errado=itens.find(q=>q!==o&&!q.cheio&&dist(q.hp)<s*.6);
+      if(!errado&&dist(o.hp)<s*1.5){encaixar(o);return}
+      if(errado){errado.b.classList.remove("balanca");void errado.b.offsetWidth;errado.b.classList.add("balanca");somErro()}
+      else{try{const c=ac(),t=c.currentTime;tom(c,{f1:700,f2:450,ini:t,dur:.14,vol:.1})}catch(e){}}
+      o.p.classList.add("voltando");o.p.style.left=o.home.x+"px";o.p.style.top=o.home.y+"px"};
     o.p.addEventListener("pointerup",solta);o.p.addEventListener("pointercancel",solta);
   }
   function fimFase(){
